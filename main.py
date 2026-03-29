@@ -42,7 +42,6 @@ start_buttons = []
 game_buttons = []
 event_buttons = []
 
-
 pygame.init()
 
 os.environ['SDL_VIDEO_CENTERED'] = '1' #called after pygame.init()
@@ -382,7 +381,7 @@ def pause_unpause_game_func():
 start_buttons.append(Button(7*screen_width/18, screen_height/2-(screen_height/10), 400, 100, title_font, start_game_func, 'Start Game', screen))
 game_buttons.append(Button(7*screen_width/18, screen_height/2+(screen_height/4), 400, 100, title_font, increment_day_func, 'Get through the day', screen)) #press this and current day goes up 
 
-while running:
+while running: #need to add async here i think
         #player inputs will be here
         events = pygame.event.get()
         for event in events:
