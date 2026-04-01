@@ -33,152 +33,6 @@ from joel_hangout import joel_hangout_event
 from meet_cratin import meet_cratin_event
 from learn_cratin import learn_cratin_event
 
-
-game_state = GameState()
-
-event_manager = EventManager()
-
-start_buttons = []
-game_buttons = []
-event_buttons = []
-
-pygame.init()
-
-os.environ['SDL_VIDEO_CENTERED'] = '1' #called after pygame.init()
-info = pygame.display.Info() #called before set_mode()
-screen_width, screen_height = info.current_w, info.current_h #grabs screen width and height
-global screen
-screen = pygame.display.set_mode((screen_width, screen_height)) #coords so must have another set of brackets around them to define them
-pygame.display.set_caption('Game 2')
-
-#game state vars
-global game_started
-game_started = False
-
-global game_active
-game_active = False
-
-global game_complete
-game_complete = False
-
-clock = pygame.time.Clock()
-running = True
-dt = 0
-
-
-#must be under pygame.init()
-#font:
-global title_font
-title_font = pygame.font.Font('font/DigitalDisco.ttf', 50)
-
-global text_font
-text_font = pygame.font.Font('font/DigitalDisco.ttf', 25)
-
-
-#intro:
-title_surface = title_font.render("Game 2", False, "white").convert_alpha()
-title_rect = title_surface.get_rect(center = (screen_width/2, (screen_height/2)-200))
-
-#maingame:
-main_surface = pygame.image.load('graphics/backgrounds/goobs_city.png').convert()
-main_surface = pygame.transform.scale(main_surface, (3*screen_width/5, 3*screen_height/5))
-main_rect = main_surface.get_rect(center = (2*screen_width/3, 2*screen_height/5))
-
-#terminal:
-terminal_surface = pygame.Surface((int(2*screen_width/7), int(5*screen_height/7)))
-terminal_surface.fill("#AFEBFA")
-terminal_rect = terminal_surface.get_rect(topleft = (screen_width/20, screen_height/10))
-
-#make function for text in terminal:
-def make_terminal(screen, game_state, font, title_font, rect):
-    padding = screen_height/45
-    y = rect.top + padding
-
-    pygame.draw.rect(screen, "#AFEBFA", rect)
-
-    title = title_font.render("Goob's rewards:", True, "black")
-    screen.blit(title, (rect.left + padding, y))
-    y += screen_height/20
-
-    for log in game_state.event_log:
-        log_surf = font.render(log, True, "black")
-        screen.blit(log_surf, (rect.left + padding, y))
-        y += screen_height/25
-
-    def format_stat(label, value, prefix=""):
-        if value < 0:
-            return f"{label}: -{prefix}{abs(value)}"
-        else:
-            return f"{label}: {prefix}{value}"
-
-    stats = [
-        format_stat("Money", game_state.money, "£"),
-        format_stat("Sweets", game_state.sweets),
-        format_stat("Hats", game_state.hats),
-    ]
-    stats_y = rect.bottom - screen_height/5
-
-    for stat in stats:
-        stat_surf = title_font.render(stat, True, "black")
-        screen.blit(stat_surf, (rect.left + padding, stats_y))
-        stats_y += screen_height/20
-
-
-#end
-end_surface = text_font.render("Game 2 is over, well done!", False, "white").convert_alpha()
-end_rect = title_surface.get_rect(center = (screen_width/2, (screen_height/2)-200))
-
-#day:
-global current_day
-current_day = 0
-
-
-#groups: 
-#player sprite group
-goob = pygame.sprite.GroupSingle()
-goob.add(Goob(4, game_state, 2*screen_width/3, 2*screen_height/5 + screen_height/30))
-
-def start_game_func():
-    global game_started 
-    game_started = True
-    print('started game') #to check in terminal remove later
-    make_game_active_func()
-    toggle_all_movement()
-    return game_started
-
-def make_game_active_func():
-    global game_active
-    game_active = True
-    print('active game') #same as started game
-    return game_active
-
-def tutorialFunc():
-    global tutorial
-    tutorial = True
-    return tutorial
-
-#movement toggles
-def toggle_horizontal_movement():
-    s = goob.sprite
-    if s is None:       
-        return
-    s.horizontal_available = 0 if s.horizontal_available == 1 else 1 #ternary/conditional expression did not know this was a thing in python too
-    return s.horizontal_available
-
-def toggle_vertical_movement():
-    z = goob.sprite
-    if z is None:       
-        return
-    z.vertical_available = 0 if z.vertical_available == 1 else 1 #ternary/conditional expression did not know this was a thing in python too
-    return z.vertical_available
-
-def toggle_all_movement():
-    toggle_horizontal_movement()
-    toggle_vertical_movement()
-
-#events--------------------------------------------------------------------
-#uhhhh remakeeee
-global events
 event_pool = [
     {
         "event_name" : find_money_5_event,
@@ -234,7 +88,7 @@ event_pool = [
         "requires" : [],
         "blocks" : [],
         "once" : False,
-        "flag" : "None",
+        "flag" : None,
     },
     {
         "event_name" : holly_molly_event,
@@ -336,89 +190,221 @@ event_pool = [
     },
 ]
 
-def decide_event():
-    valid_events = []
-
-    for event in event_pool:
-        if not all(game_state.get_flag(f) for f in event.get("requires", [])):
-            continue
-
-        if any(game_state.get_flag(f) for f in event.get("blocks", [])):
-            continue
-
-        if event.get("once") and game_state.get_flag(event.get("flag")):
-            continue
-
-        valid_events.append(event)
-    
-    if not valid_events:
-        return
-    
-    chosen = random.choice(valid_events)
-    event_manager.start_event(chosen["event_name"](game_state, text_font, (screen_width, screen_height), screen), flag=chosen.get("flag"))
-
-
-#-----------------------------------------------------------------------------------
 MAX_DAYS = 25
 
-def increment_day_func():
-    global current_day, game_complete
-    current_day += 1
 
-    if current_day >= MAX_DAYS:
-        ending = select_ending(game_state)
-        event_manager.start_event(ending["event"](game_state, text_font, (screen_width, screen_height), screen))
-        game_complete = True
-        return
-    decide_event()
-    return current_day, game_complete
+class Game:
 
-def pause_unpause_game_func():
-    global game_active
-    game_active = False if game_active == True else True
-    return game_active
+    def __init__(self):
+        pygame.init()
 
-start_buttons.append(Button(7*screen_width/18, screen_height/2-(screen_height/10), 400, 100, title_font, start_game_func, 'Start Game', screen))
-game_buttons.append(Button(7*screen_width/18, screen_height/2+(screen_height/4), 400, 100, title_font, increment_day_func, 'Get through the day', screen)) #press this and current day goes up 
+        os.environ['SDL_VIDEO_CENTERED'] = '1'
+        self.screen_width = pygame.display.Info().current_w
+        self.screen_height = pygame.display.Info().current_h
+        self.screen = pygame.display.set_mode((self.screen_width, self.screen_height))
+        pygame.display.set_caption('Game 2')
 
-while running: #need to add async here i think
-        #player inputs will be here
-        events = pygame.event.get()
-        for event in events:
-            if event.type == pygame.QUIT:
-                running = False
+        self.clock = pygame.time.Clock()
+        self.dt = 0
 
+        self.game_state = GameState()
+        self.event_manager = EventManager()
+
+        self.title_font = pygame.font.Font('font/DigitalDisco.ttf', 50)
+        self.text_font = pygame.font.Font('font/DigitalDisco.ttf', 25)
         
-        screen.fill("#4595DF")
+        #buttons
+        self.start_buttons = []
+        self.game_buttons = []
+        self.event_buttons = []
 
-        if game_started == False:
-            screen.blit(title_surface,title_rect)
-            for btn in start_buttons:
-                btn.process(events)
+        self.start_buttons.append(Button(7*self.screen_width/18, self.screen_height/2-(self.screen_height/10), 400, 100, self.title_font, self.start_game_func, 'Start Game', self.screen))
+        self.game_buttons.append(Button(7*self.screen_width/18, self.screen_height/2+(self.screen_height/4), 400, 100, self.title_font, self.increment_day_func, 'Get through the day', self.screen)) #press this and current day goes up 
 
-        elif game_complete and not event_manager.is_active():
-            print("game complete")
-            running = False       
+        self.game_started = False
+        self.game_active = False
+        self.game_complete = False
+        self.running = True
+
+
+        #intro
+        self.title_surface = self.title_font.render("Game 2", False, "white").convert_alpha()
+        self.title_rect = self.title_surface.get_rect(center = (self.screen_width/2, (self.screen_height/2)-200))
+
+        #main game
+        self.main_surface = pygame.image.load('graphics/backgrounds/goobs_city.png').convert()
+        self.main_surface = pygame.transform.scale(self.main_surface, (3*self.screen_width/5, 3*self.screen_height/5))
+        self.main_rect = self.main_surface.get_rect(center = (2*self.screen_width/3, 2*self.screen_height/5))
+
+        #terminal
+        self.terminal_surface = pygame.Surface((int(2*self.screen_width/7), int(5*self.screen_height/7)))
+        self.terminal_surface.fill("#AFEBFA")
+        self.terminal_rect = self.terminal_surface.get_rect(topleft = (self.screen_width/20, self.screen_height/10))
+
+        self.end_surface = self.text_font.render("Game 2 is over, well done!", False, "white").convert_alpha()
+        self.end_rect = self.title_surface.get_rect(center = (self.screen_width/2, (self.screen_height/2)-200))
+
+        self.current_day = 0
+
+        self.goob = pygame.sprite.GroupSingle()
+        self.goob.add(Goob(4, self.game_state, 2*self.screen_width/3, 2*self.screen_height/5 + self.screen_height/30))
         
-        elif event_manager.is_active():
-            event_manager.update(events, screen)
 
+#fix the 5000000 other functions and make async then add minigame and polish stuff - proper endscreen, multiple sprites? music? idk - enough to get to the 7.5 hours left atleast
+    def start_game_func(self):
+        self.game_started = True
+        print("started game")
+        self.make_game_active_func()
+        self.toggle_all_movement()
+        return self.game_started
+    
+    def make_game_active_func(self):
+        self.game_active = True
+        print('active game')
+        return self.game_active
 
-        elif game_active:
-                goob.sprite.control_mode = "idle"
-                day_surface = title_font.render("GOOB - Day "+ str(current_day), False, "white").convert_alpha()
-                day_rect = day_surface.get_rect(center = (screen_width/2, screen_height/16))
-                screen.blit(day_surface,day_rect)
-                screen.blit(main_surface, main_rect)
-                make_terminal(screen, game_state, text_font, title_font, terminal_rect)
-                #Actual game goes in here
-                game_buttons[0].process(events) 
+    def decide_event(self):
+        valid_events = []
 
-                goob.draw(screen)
-                goob.update()   
+        for event in event_pool:
+            if not all(self.game_state.get_flag(f) for f in event.get("requires", [])):
+                continue
+                
+            if any(self.game_state.get_flag(f) for f in event.get("blocks", [])):
+                continue
 
-        pygame.display.flip()
-        dt = clock.tick(60) / 1000
-pygame.quit()
+            if event.get("once") and self.game_state.get_flag(event.get("flag")):
+                continue
+
+            valid_events.append(event)
+
+        if not valid_events:
+            return
+            
+        chosen = random.choice(valid_events)
+        self.event_manager.start_event(chosen["event_name"](self.game_state, self.text_font, (self.screen_width, self.screen_height), self.screen), flag=chosen.get("flag"))
+
 
     
+    def increment_day_func(self):
+        self.current_day += 1
+
+        if self.current_day >= MAX_DAYS:
+            ending = select_ending(self.game_state)
+            self.event_manager.start_event(ending["event"](self.game_state, self.text_font, (self.screen_width,self.screen_height), self.screen))
+            self.game_complete = True
+            return
+        
+        self.decide_event()
+        return self.current_day, self.game_complete
+
+
+    def make_terminal(self):
+        rect = self.terminal_rect
+        padding = self.screen_height/45
+        y = rect.top + padding
+
+
+        pygame.draw.rect(self.screen, "#AFEBFA", rect)
+
+        self.title = self.title_font.render("Goob's rewards:", True, "black")
+        self.screen.blit(self.title, (rect.left + padding, y))
+        y += self.screen_height/20
+
+        for log in self.game_state.event_log:
+            log_surf = self.text_font.render(log, True, "black")
+            self.screen.blit(log_surf, (rect.left + padding, y))
+            y += self.screen_height/25
+
+        def format_stat(label, value, prefix=""):
+            if value < 0:
+                return f"{label}: -{prefix}{abs(value)}"
+            else:
+                return f"{label}: {prefix}{value}"
+
+        stats = [
+            format_stat("Money", self.game_state.money, "£"),
+            format_stat("Sweets", self.game_state.sweets),
+            format_stat("Hats", self.game_state.hats),
+        ]
+        stats_y = rect.bottom - self.screen_height/5
+
+        for stat in stats:
+            stat_surf = self.title_font.render(stat, True, "black")
+            self.screen.blit(stat_surf, (rect.left + padding, stats_y))
+            stats_y += self.screen_height/20
+
+
+
+
+
+    def toggle_horizontal_movement(self):
+        s = self.goob.sprite
+        if s is None:
+            return
+        s.horizontal_available = 0 if s.horizontal_available == 1 else 1 #ternary/conditional expression did not know this was a thing in python too
+        return s.horizontal_available
+
+    def toggle_vertical_movement(self):
+        z = self.goob.sprite
+        if z is None:       
+            return
+        z.vertical_available = 0 if z.vertical_available == 1 else 1 #ternary/conditional expression did not know this was a thing in python too
+        return z.vertical_available
+
+    def toggle_all_movement(self):
+        self.toggle_vertical_movement()
+        self.toggle_horizontal_movement()
+
+
+
+    async def run(self):
+        while self.running:
+            events = pygame.event.get()
+
+            for event in events:
+               if event.type == pygame.QUIT:
+                   self.running = False
+            
+            self.screen.fill("#4595DF")
+
+            if self.game_started == False:
+                self.screen.blit(self.title_surface, self.title_rect)
+                for btn in self.start_buttons:
+                    btn.process(events)
+
+            elif self.game_complete and not self.event_manager.is_active():
+                print("game complete")
+                self.running = False       
+
+            elif self.event_manager.is_active():
+                self.event_manager.update(events, self.screen)
+
+            elif self.game_active:
+                self.goob.sprite.control_mode = "idle"
+                day_surface = self.title_font.render("GOOB - Day "+ str(self.current_day), False, "white").convert_alpha()
+                day_rect = day_surface.get_rect(center = (self.screen_width/2, self.screen_height/16))
+                self.screen.blit(day_surface,day_rect)
+                self.screen.blit(self.main_surface, self.main_rect)
+                self.make_terminal()
+                #Actual game goes in here
+                self.game_buttons[0].process(events) 
+
+                self.goob.draw(self.screen)
+                self.goob.update()   
+
+
+            pygame.display.flip() 
+            self.dt = self.clock.tick(60) / 1000
+
+            await asyncio.sleep(0)
+        pygame.quit()
+
+async def main():
+    game = Game()
+    await game.run()
+
+if __name__ == "__main__":
+    asyncio.run(main())
+
+
