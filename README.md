@@ -1,5 +1,8 @@
-This is a visual novel created in pygame to help me revise classes 
-It follows a character nasmed Goob who interacts with friends and strangers around him
+This is Game 2, a visual novel created in pygame to help me revise classes, since I kept losing a lot of marks on OOP questions, and never really used it that much.
+
+Initially, i based it off of an OCR A-level Computer Science question about a board game until it quickly devolved into what it is now. Still a work in progress!! 
+
+It follows a character named Goob who interacts with friends and strangers around him, event are randomly decided, so no two playthroughs are the same.
 Get to day 25 and see what ending you'll get!
 
 To run, get main.exe, and graphics, fonts in the same folder with eachother
